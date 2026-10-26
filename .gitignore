@@ -1,0 +1,23 @@
+# 构建产物
+bin/
+obj/
+dist/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# 本工具运行时会在 exe 旁边生成，记录上次选择的游戏目录
+scf.ini
+
+# 测试时生成的备份目录
+_scf_backup/
+
+# 系统文件
+Thumbs.db
+desktop.ini
+.DS_Store
