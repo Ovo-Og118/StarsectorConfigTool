@@ -11,6 +11,8 @@ namespace StarsectorConfigTool
         // ---- 顶部：游戏目录 ----
         private TextBox _txtDir;
         private Label _lblStatus;
+        private Button _btnBrowse;
+        private Button _btnDetect;
 
         // ---- 中间：选项卡 ----
         private TabControl _tabs;
@@ -18,8 +20,11 @@ namespace StarsectorConfigTool
         // ---- 运存页 ----
         private Label _lblHeapNow;
         private Label _lblHeapFile;
+        private Label _lblHeapDesc;
+        private Label _lblGbMax;
         private NumericUpDown _numHeapMb;
         private TrackBar _trkHeapGb;
+        private TabPage _heapPage;
         private bool _syncingHeap;
 
         // ---- 设置页 ----
@@ -39,7 +44,8 @@ namespace StarsectorConfigTool
         public MainForm()
         {
             BuildUi();
-            Load += delegate { DetectAndLoad(); Shown += OnFirstShown; };
+            RelayoutWide();
+            Load += delegate { RelayoutWide(); DetectAndLoad(); Shown += OnFirstShown; };
         }
 
         private bool _firstShownDone;
@@ -57,12 +63,18 @@ namespace StarsectorConfigTool
         private void BuildUi()
         {
             Text = "Starsector 基础配置工具  v1.0";
-            ClientSize = new Size(880, 730);
-            MinimumSize = new Size(900, 770);
+            ClientSize = new Size(900, 740);
+            MinimumSize = new Size(910, 790);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Microsoft YaHei UI", 9F);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
+
+            // 允许拖动边框改变大小，也可以最大化
+            FormBorderStyle = FormBorderStyle.Sizable;
+            MaximizeBox = true;
+            MinimizeBox = true;
+
+            // DPI 缩放交给 WinForms 自己按字体换算，比固定像素更稳
+            AutoScaleMode = AutoScaleMode.Font;
 
             BuildTopPanel();
             BuildBottomPanel();
@@ -88,36 +100,38 @@ namespace StarsectorConfigTool
                 BackColor = SystemColors.Window
             };
 
-            var btnBrowse = new Button
+            _btnBrowse = new Button
             {
                 Text = "浏览...",
                 Location = new Point(694, 9),
                 Width = 76,
                 Height = 26
             };
-            btnBrowse.Click += delegate { BrowseInstallDir(); };
+            _btnBrowse.Click += delegate { BrowseInstallDir(); };
 
-            var btnDetect = new Button
+            _btnDetect = new Button
             {
                 Text = "自动检测",
                 Location = new Point(776, 9),
                 Width = 88,
                 Height = 26
             };
-            btnDetect.Click += delegate { DetectAndLoad(); };
+            _btnDetect.Click += delegate { DetectAndLoad(); };
 
             _lblStatus = new Label
             {
                 Location = new Point(92, 42),
-                AutoSize = true,
+                Size = new Size(760, 20),
+                AutoSize = false,
+                AutoEllipsis = true,
                 ForeColor = Color.DimGray,
                 Text = "未加载"
             };
 
             pnl.Controls.Add(lbl);
             pnl.Controls.Add(_txtDir);
-            pnl.Controls.Add(btnBrowse);
-            pnl.Controls.Add(btnDetect);
+            pnl.Controls.Add(_btnBrowse);
+            pnl.Controls.Add(_btnDetect);
             pnl.Controls.Add(_lblStatus);
             Controls.Add(pnl);
         }
@@ -204,9 +218,54 @@ namespace StarsectorConfigTool
             _tabs.BringToFront();
         }
 
+        /// <summary>
+        /// 窗口尺寸变化时重新摆放需要横向拉伸的控件。
+        ///
+        /// 这里用代码计算而不是靠 Anchor：这些控件放在 Dock 面板里，
+        /// 构造阶段面板宽度还没最终确定，Anchor 记下的基准会不准，
+        /// 拉伸后容易出现偏移。
+        /// </summary>
+        private void RelayoutWide()
+        {
+            if (_txtDir == null || _btnBrowse == null || _btnDetect == null) return;
+
+            const int margin = 12;
+            const int gap = 8;
+            int w = ClientSize.Width;
+
+            // 顶部：两个按钮贴右，路径框吃掉剩下的宽度
+            _btnDetect.Left = w - margin - _btnDetect.Width;
+            _btnBrowse.Left = _btnDetect.Left - gap - _btnBrowse.Width;
+            _txtDir.Width = Math.Max(120, _btnBrowse.Left - gap - _txtDir.Left);
+            _lblStatus.Width = Math.Max(120, w - _lblStatus.Left - margin);
+
+            // 底部日志框
+            if (_log != null)
+                _log.Width = Math.Max(200, w - _log.Left - margin);
+
+            // 运存页里随宽度变化的几项
+            if (_heapPage != null && _lblHeapDesc != null && _trkHeapGb != null && _lblGbMax != null)
+            {
+                int pageW = _heapPage.ClientSize.Width;
+                if (pageW > 0)
+                {
+                    _lblHeapDesc.Width = Math.Max(200, pageW - _lblHeapDesc.Left - 16);
+                    _trkHeapGb.Width = Math.Max(120, pageW - _trkHeapGb.Left - 46);
+                    _lblGbMax.Left = Math.Max(_trkHeapGb.Left, pageW - 16 - _lblGbMax.Width);
+                }
+            }
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            RelayoutWide();
+        }
+
         private TabPage BuildHeapTab()
         {
-            var page = new TabPage("运存（JVM 堆）") { Padding = new Padding(14), BackColor = SystemColors.Control };
+            _heapPage = new TabPage("运存（JVM 堆）") { Padding = new Padding(14), BackColor = SystemColors.Control };
+            TabPage page = _heapPage;
 
             var lblTitle = new Label
             {
@@ -216,7 +275,7 @@ namespace StarsectorConfigTool
                 Font = new Font(Font.FontFamily, 11F, FontStyle.Bold)
             };
 
-            var lblDesc = new Label
+            _lblHeapDesc = new Label
             {
                 Location = new Point(14, 44),
                 Size = new Size(820, 54),
@@ -291,7 +350,7 @@ namespace StarsectorConfigTool
             _trkHeapGb.ValueChanged += delegate { SyncHeapFromTrackbar(); };
 
             var lblGbMin = new Label { Text = "1 GB", Location = new Point(92, 262), AutoSize = true, ForeColor = Color.Gray };
-            var lblGbMax = new Label { Text = "64 GB", Location = new Point(694, 262), AutoSize = true, ForeColor = Color.Gray };
+            _lblGbMax = new Label { Text = "64 GB", Location = new Point(694, 262), AutoSize = true, ForeColor = Color.Gray };
 
             var lblQuick = new Label
             {
@@ -318,7 +377,7 @@ namespace StarsectorConfigTool
             }
 
             page.Controls.Add(lblTitle);
-            page.Controls.Add(lblDesc);
+            page.Controls.Add(_lblHeapDesc);
             page.Controls.Add(lblNowCaption);
             page.Controls.Add(_lblHeapNow);
             page.Controls.Add(lblFileCaption);
@@ -328,7 +387,7 @@ namespace StarsectorConfigTool
             page.Controls.Add(lblMb);
             page.Controls.Add(_trkHeapGb);
             page.Controls.Add(lblGbMin);
-            page.Controls.Add(lblGbMax);
+            page.Controls.Add(_lblGbMax);
             page.Controls.Add(lblQuick);
 
             return page;

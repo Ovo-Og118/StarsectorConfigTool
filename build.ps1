@@ -56,6 +56,13 @@ if (-not (Test-Path $exe)) {
 # 复制到 dist，附带说明文件
 if (-not (Test-Path $dist)) { New-Item -ItemType Directory -Path $dist | Out-Null }
 Copy-Item $exe $dist -Force
+
+# .exe.config 要跟着一起发：
+# 它负责告诉 WinForms 开启高 DPI 支持，缺了它在不同缩放比例的
+# 显示器之间拖动窗口时控件不会重新缩放。
+$cfg = "$exe.config"
+if (Test-Path $cfg) { Copy-Item $cfg $dist -Force }
+
 foreach ($f in @('README.md', 'LICENSE')) {
     $src = Join-Path $root $f
     if (Test-Path $src) { Copy-Item $src $dist -Force }
@@ -64,5 +71,5 @@ foreach ($f in @('README.md', 'LICENSE')) {
 $size = [math]::Round((Get-Item (Join-Path $dist 'StarsectorConfigTool.exe')).Length / 1KB, 1)
 Write-Host ''
 Write-Host "构建成功：dist\StarsectorConfigTool.exe  ($size KB)" -ForegroundColor Green
-Write-Host '把这个 exe 直接发给别人就能用，不需要装任何运行库。'
+Write-Host '  exe 可以单独运行；连同一个 .exe.config 一起发能获得更好的多显示器缩放支持。'
 Write-Host ''

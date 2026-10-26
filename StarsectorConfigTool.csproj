@@ -19,6 +19,9 @@
     <Platforms>AnyCPU</Platforms>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
+
+    <!-- DPI 感知清单：不加这个，125% / 150% 缩放下窗口会被位图像素拉伸而发虚 -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <Nullable>disable</Nullable>
